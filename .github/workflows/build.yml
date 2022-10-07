@@ -1,0 +1,33 @@
+name: Build documentation and publish
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install dependencies
+        run: sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi binutils-arm-none-eabi cmake ninja-build doxygen
+      - uses: actions/checkout@v3
+      - name: Generate build
+        run: cmake -G Ninja -B build -S . --toolchain .github/workflows/cortex-m3.cmake -DORBCODE_LIBTRACE_BUILD_TEST=ON -DORBCODE_LIBTRACE_DOCS=ON
+      - name: Build
+        run: ninja -C build
+      - name: Build documentation
+        run: ninja -C build docs
+      - uses: actions/upload-pages-artifact@v1
+        with:
+          path: build/docs/html
+  deploy: # https://github.com/actions/deploy-pages
+    needs: build
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
+    permissions:
+      pages: write      # to deploy to Pages
+      id-token: write   # to verify the deployment originates from an appropriate source
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v1
