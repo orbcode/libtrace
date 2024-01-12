@@ -197,6 +197,7 @@ extern "C"
     void DWTSetup(const DWTOptions* options)
     {
         CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk; // Enable ITM and DWT
+        DWT->LAR = 0xC5ACCE55;                          // Unlock DWT access via magic number
 
         uint32_t ctrl = 0;
         ctrl |= (options->FoldedInstructionCounterEvent ? 1 : 0) << DWT_CTRL_FOLDEVTENA_Pos;
