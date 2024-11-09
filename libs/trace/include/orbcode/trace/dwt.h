@@ -197,7 +197,21 @@ extern "C"
     void DWTSetup(const DWTOptions* options)
     {
         CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk; // Enable ITM and DWT
-        DWT->LAR = 0xC5ACCE55;                          // Unlock DWT access via magic number
+
+        // Some CPU do not have DWT lock registers
+        // All CoreSight compoents that might have lock, will have
+        //  lock status register at offset 0xFB4
+        //  lock access register at offset 0xFB0
+        // If locking is not implemented, lock status register will read as zero
+        // See: ARMv7-M Architecture Reference Manual, section D.1.1, table D1-2
+        volatile uint32_t* lockStatus = ((volatile uint32_t*)DWT) + (0xFB4 / 4);
+        volatile uint32_t* lockAccess = ((volatile uint32_t*)DWT) + (0xFB0 / 4);
+
+        if(*lockStatus != 0)
+        {
+            // lock status is not zero, meaning that unlock is necessary
+            *lockAccess = 0xC5ACCE55; // Unlock DWT access via magic number
+        }
 
         uint32_t ctrl = 0;
         ctrl |= (options->FoldedInstructionCounterEvent ? 1 : 0) << DWT_CTRL_FOLDEVTENA_Pos;
